@@ -12,12 +12,14 @@ import (
 	"github.com/Vyary/otel-rev-proxy/internal/telemetry"
 )
 
+// main is the application's entry point. It calls run to start the reverse proxy server and terminates the program with a fatal error if run returns an error.
 func main() {
 	if err := run(); err != nil {
 		log.Fatal(err)
 	}
 }
 
+// run initializes signal handling, sets up the OpenTelemetry SDK, and starts the reverse proxy server. It listens for OS interrupt signals or server errors and, upon an interrupt, initiates a graceful shutdown of the proxy using a 20-second timeout. It returns an error if any initialization step fails or if the shutdown process encounters an error.
 func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()

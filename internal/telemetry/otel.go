@@ -18,7 +18,9 @@ import (
 )
 
 // setupOTelSDK bootstraps the OpenTelemetry pipeline.
-// If it does not return an error, make sure to call shutdown for proper cleanup.
+// SetupOTelSDK initializes the OpenTelemetry SDK for tracing, metrics, and logging by configuring the text map propagator, trace provider, meter provider, and logger provider. It returns a shutdown function that aggregates cleanup routines for all configured components; the shutdown function must be called to release resources when the SDK is no longer needed.
+//
+// The provided context is used for managing deadlines and cancellation during both initialization and cleanup. If any initialization step fails, the function performs cleanup and returns the encountered error.
 func SetupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, err error) {
 	var shutdownFuncs []func(context.Context) error
 
@@ -73,6 +75,7 @@ func SetupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, er
 	return
 }
 
+// newPropagator creates a composite text map propagator that supports both TraceContext and Baggage propagation.
 func newPropagator() propagation.TextMapPropagator {
 	return propagation.NewCompositeTextMapPropagator(
 		propagation.TraceContext{},
@@ -80,6 +83,7 @@ func newPropagator() propagation.TextMapPropagator {
 	)
 }
 
+// newTracerProvider creates and configures a new tracer provider that batches and exports trace data via a gRPC exporter over an insecure connection, attaching a resource with the service name "reverse-proxy". It panics if the exporter cannot be initialized and returns an error if resource creation fails.
 func newTracerProvider() (*trace.TracerProvider, error) {
 	ctx := context.Background()
 	exp, err := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure())
@@ -100,6 +104,7 @@ func newTracerProvider() (*trace.TracerProvider, error) {
 	return tracerProvider, nil
 }
 
+// newMeterProvider creates a MeterProvider that exports metrics via an OTLP gRPC exporter using a periodic reader. It associates the provider with a resource labeled using the service name "reverse-proxy". The function panics if the OTLP metric exporter initialization fails and returns an error if creating the resource does.
 func newMeterProvider() (*metric.MeterProvider, error) {
 	ctx := context.Background()
 	exp, err := otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithInsecure())
@@ -120,6 +125,9 @@ func newMeterProvider() (*metric.MeterProvider, error) {
 	return meterProvider, nil
 }
 
+// newLoggerProvider creates a new OTLP logger provider configured with a batch processor.
+// It initializes an OTLP gRPC log exporter using an insecure connection and sets up a batch processor
+// to handle log entries. The function panics if exporter initialization fails.
 func newLoggerProvider() (*log.LoggerProvider, error) {
 	ctx := context.Background()
 	exp, err := otlploggrpc.New(ctx, otlploggrpc.WithInsecure())

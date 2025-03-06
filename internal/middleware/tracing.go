@@ -18,6 +18,8 @@ var (
 	inFlightRequests metric.Int64UpDownCounter
 )
 
+// WithTracing wraps the provided HTTP handler with OpenTelemetry tracing instrumentation.
+// It returns a new handler that assigns each request a span named using the HTTP method and URL path.
 func WithTracing(next http.Handler) http.Handler {
 	return otelhttp.NewHandler(next, "proxy_request",
 		otelhttp.WithSpanNameFormatter(func(operation string, r *http.Request) string {
