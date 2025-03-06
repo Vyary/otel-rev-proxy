@@ -18,6 +18,11 @@ var (
 	logger = otelslog.NewLogger(name)
 )
 
+// New creates and returns an HTTP server configured as a reverse proxy to http://localhost:8080 with OpenTelemetry tracing.
+// 
+// It sets up a reverse proxy using httputil.NewSingleHostReverseProxy and customizes its transport with tracingTransport to integrate tracing via OpenTelemetry.
+// The proxy is wrapped with tracing middleware, and the resulting server listens on port 7000.
+// An error is returned if the target URL cannot be parsed.
 func New() (*http.Server, error) {
 	target, err := url.Parse("http://localhost:8080")
 	if err != nil {
