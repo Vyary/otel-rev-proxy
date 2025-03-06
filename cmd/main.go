@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/Vyary/otel-rev-proxy/internal/proxy"
@@ -21,7 +22,7 @@ func main() {
 
 // run initializes signal handling, sets up the OpenTelemetry SDK, and starts the reverse proxy server. It listens for OS interrupt signals or server errors and, upon an interrupt, initiates a graceful shutdown of the proxy using a 20-second timeout. It returns an error if any initialization step fails or if the shutdown process encounters an error.
 func run() error {
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	otelShutdown, err := telemetry.SetupOTelSDK(ctx)
