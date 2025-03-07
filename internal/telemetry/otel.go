@@ -3,6 +3,7 @@ package telemetry
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
@@ -88,7 +89,7 @@ func newTracerProvider() (*trace.TracerProvider, error) {
 	ctx := context.Background()
 	exp, err := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure())
 	if err != nil {
-    return nil, err
+		return nil, fmt.Errorf("failed to create trace exporter: %w", err)
 	}
 
 	res, err := resource.New(ctx,
@@ -97,7 +98,7 @@ func newTracerProvider() (*trace.TracerProvider, error) {
 		),
 	)
 	if err != nil {
-    return nil, err
+		return nil, err
 	}
 
 	tracerProvider := trace.NewTracerProvider(trace.WithBatcher(exp), trace.WithResource(res))
@@ -109,7 +110,7 @@ func newMeterProvider() (*metric.MeterProvider, error) {
 	ctx := context.Background()
 	exp, err := otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithInsecure())
 	if err != nil {
-    return nil, err
+		return nil, fmt.Errorf("failed to create meter exporter: %w", err)
 	}
 
 	res, err := resource.New(ctx,
@@ -132,7 +133,7 @@ func newLoggerProvider() (*log.LoggerProvider, error) {
 	ctx := context.Background()
 	exp, err := otlploggrpc.New(ctx, otlploggrpc.WithInsecure())
 	if err != nil {
-    return nil, err
+		return nil, fmt.Errorf("failed to create log exporter: %w", err)
 	}
 
 	processor := log.NewBatchProcessor(exp)
