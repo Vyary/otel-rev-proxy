@@ -19,11 +19,13 @@ func New() (*http.Server, error) {
 	proxy := httputil.NewSingleHostReverseProxy(target)
 	proxy.Transport = otelhttp.NewTransport(http.DefaultTransport)
 
-	handler := otelhttp.NewHandler(telemetry.WithMetrics(proxy), "reverse_proxy",
+	handler := otelhttp.NewHandler(proxy, "reverse_proxy",
 		otelhttp.WithSpanNameFormatter(func(operation string, r *http.Request) string {
 			return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
 		}),
 	)
+
+	handler = telemetry.WithMetrics(handler)
 
 	return &http.Server{
 		Addr:    ":7000",
