@@ -28,8 +28,15 @@ func WithMetrics(next http.Handler) http.Handler {
 		requestCounter.Add(r.Context(), 1, metric.WithAttributes(attribute.Key("method").String(r.Method)), metric.WithAttributes(attribute.Key("code").Int(ww.statusCode)))
 
 		duration := time.Since(startTime).Seconds()
-		requestDuration.Record(r.Context(), duration, metric.WithAttributes(attribute.Key("method").String(r.Method)), metric.WithAttributes(attribute.Key("code").Int(ww.statusCode)))
+		requestDuration.Record(r.Context(), duration,
+			metric.WithAttributes(attribute.Key("method").String(r.Method)),
+			metric.WithAttributes(attribute.Key("route").String(r.URL.Path)),
+			metric.WithAttributes(attribute.Key("code").Int(ww.statusCode)))
 	})
+}
+
+var defaultBuckets = []float64{
+	0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10,
 }
 
 func init() {
@@ -61,6 +68,7 @@ func init() {
 		"request_duration_seconds",
 		metric.WithDescription("Duration of requests handled by the reverse proxy in seconds."),
 		metric.WithUnit("s"),
+		metric.WithExplicitBucketBoundaries(defaultBuckets...),
 	)
 	if err != nil {
 		panic(err)
