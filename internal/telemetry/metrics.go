@@ -5,16 +5,22 @@ import (
 	"net/http"
 	"time"
 
+	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 )
 
 var (
-	meter           = otel.Meter("reverse-proxy")
-	proxyUptime     metric.Float64ObservableCounter
-	requestCounter  metric.Int64Counter
-	requestDuration metric.Float64Histogram
+	logger = otelslog.NewLogger("reverse-proxy")
+
+	meter                  = otel.Meter("reverse-proxy")
+	proxyUptime            metric.Float64ObservableCounter
+	requestCounter         metric.Int64Counter
+	requestDuration        metric.Float64Histogram
+	requestDurationBuckets = []float64{
+		0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10,
+	}
 )
 
 func WithMetrics(next http.Handler) http.Handler {
@@ -25,18 +31,19 @@ func WithMetrics(next http.Handler) http.Handler {
 
 		next.ServeHTTP(ww, r)
 
-		requestCounter.Add(r.Context(), 1, metric.WithAttributes(attribute.Key("method").String(r.Method)), metric.WithAttributes(attribute.Key("code").Int(ww.statusCode)))
+		requestCounter.Add(r.Context(), 1,
+			metric.WithAttributes(
+				attribute.Key("method").String(r.Method),
+				attribute.Key("route").String(r.URL.Path),
+				attribute.Key("code").Int(ww.statusCode)))
 
 		duration := time.Since(startTime).Seconds()
 		requestDuration.Record(r.Context(), duration,
-			metric.WithAttributes(attribute.Key("method").String(r.Method)),
-			metric.WithAttributes(attribute.Key("route").String(r.URL.Path)),
-			metric.WithAttributes(attribute.Key("code").Int(ww.statusCode)))
+			metric.WithAttributes(
+				attribute.Key("method").String(r.Method),
+				attribute.Key("route").String(r.URL.Path),
+				attribute.Key("code").Int(ww.statusCode)))
 	})
-}
-
-var defaultBuckets = []float64{
-	0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10,
 }
 
 func init() {
@@ -53,6 +60,7 @@ func init() {
 		}),
 	)
 	if err != nil {
+		logger.Error("failed to create an uptime metric", "error", err)
 		panic(err)
 	}
 
@@ -61,6 +69,7 @@ func init() {
 		metric.WithDescription("Total number of requests handled by the reverse proxy."),
 	)
 	if err != nil {
+		logger.Error("failed to create an requests total metric", "error", err)
 		panic(err)
 	}
 
@@ -68,9 +77,10 @@ func init() {
 		"request_duration_seconds",
 		metric.WithDescription("Duration of requests handled by the reverse proxy in seconds."),
 		metric.WithUnit("s"),
-		metric.WithExplicitBucketBoundaries(defaultBuckets...),
+		metric.WithExplicitBucketBoundaries(requestDurationBuckets...),
 	)
 	if err != nil {
+		logger.Error("failed to create request duration metric")
 		panic(err)
 	}
 }
