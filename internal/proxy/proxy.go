@@ -5,13 +5,15 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 
 	"github.com/Vyary/otel-rev-proxy/internal/telemetry"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 func New() (*http.Server, error) {
-	target, err := url.Parse("http://hello:8080")
+	proxyTarget := os.Getenv("PROXY_TARGET")
+	target, err := url.Parse(proxyTarget)
 	if err != nil {
 		return nil, err
 	}
