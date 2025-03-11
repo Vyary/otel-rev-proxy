@@ -31,8 +31,6 @@ func WithMetrics(next http.Handler) http.Handler {
 
 		next.ServeHTTP(ww, r)
 
-		logger.Info("request", "method", r.Method, "route", r.URL.Path, "code", ww.statusCode)
-
 		requestCounter.Add(r.Context(), 1,
 			metric.WithAttributes(
 				attribute.Key("method").String(r.Method),
