@@ -28,7 +28,7 @@ func New() (*http.Server, error) {
 	handler = telemetry.WithMetrics(handler)
 
 	return &http.Server{
-		Addr:    ":7000",
+		Addr:    ":80",
 		Handler: handler,
 	}, nil
 }
