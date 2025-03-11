@@ -85,7 +85,7 @@ func newPropagator() propagation.TextMapPropagator {
 
 func newTracerProvider() (*trace.TracerProvider, error) {
 	ctx := context.Background()
-	exp, err := otlptracegrpc.New(ctx, otlptracegrpc.WithEndpointURL(endpoint), otlptracegrpc.WithInsecure())
+	exp, err := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure(), otlptracegrpc.WithEndpointURL(endpoint))
 	if err != nil {
 		panic(err)
 	}
@@ -105,7 +105,7 @@ func newTracerProvider() (*trace.TracerProvider, error) {
 
 func newMeterProvider() (*metric.MeterProvider, error) {
 	ctx := context.Background()
-	exp, err := otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithEndpointURL(endpoint), otlpmetricgrpc.WithInsecure())
+	exp, err := otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithInsecure(), otlpmetricgrpc.WithEndpoint(endpoint))
 	if err != nil {
 		panic(err)
 	}
@@ -125,12 +125,21 @@ func newMeterProvider() (*metric.MeterProvider, error) {
 
 func newLoggerProvider() (*log.LoggerProvider, error) {
 	ctx := context.Background()
-	exp, err := otlploggrpc.New(ctx, otlploggrpc.WithEndpointURL(endpoint), otlploggrpc.WithInsecure())
+	exp, err := otlploggrpc.New(ctx, otlploggrpc.WithInsecure(), otlploggrpc.WithEndpoint(endpoint))
 	if err != nil {
 		panic(err)
 	}
 
+	res, err := resource.New(ctx,
+		resource.WithAttributes(
+			semconv.ServiceNameKey.String("reverse-proxy"),
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	processor := log.NewBatchProcessor(exp)
-	loggerProvider := log.NewLoggerProvider(log.WithProcessor(processor))
+	loggerProvider := log.NewLoggerProvider(log.WithProcessor(processor), log.WithResource(res))
 	return loggerProvider, nil
 }
