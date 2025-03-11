@@ -3,11 +3,12 @@ package telemetry
 import (
 	"context"
 	"errors"
+	"os"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/log"
@@ -16,6 +17,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
+
+var endpoint = os.Getenv("COLLECTOR")
 
 // setupOTelSDK bootstraps the OpenTelemetry pipeline.
 // If it does not return an error, make sure to call shutdown for proper cleanup.
@@ -82,7 +85,7 @@ func newPropagator() propagation.TextMapPropagator {
 
 func newTracerProvider() (*trace.TracerProvider, error) {
 	ctx := context.Background()
-	exp, err := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure())
+	exp, err := otlptracegrpc.New(ctx, otlptracegrpc.WithEndpoint(endpoint), otlptracegrpc.WithInsecure())
 	if err != nil {
 		panic(err)
 	}
@@ -102,7 +105,7 @@ func newTracerProvider() (*trace.TracerProvider, error) {
 
 func newMeterProvider() (*metric.MeterProvider, error) {
 	ctx := context.Background()
-	exp, err := otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithInsecure())
+	exp, err := otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithEndpoint(endpoint), otlpmetricgrpc.WithInsecure())
 	if err != nil {
 		panic(err)
 	}
@@ -121,13 +124,13 @@ func newMeterProvider() (*metric.MeterProvider, error) {
 }
 
 func newLoggerProvider() (*log.LoggerProvider, error) {
-	logExporter, err := stdoutlog.New()
+	ctx := context.Background()
+	exp, err := otlploggrpc.New(ctx, otlploggrpc.WithEndpoint(endpoint), otlploggrpc.WithInsecure())
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
-	loggerProvider := log.NewLoggerProvider(
-		log.WithProcessor(log.NewBatchProcessor(logExporter)),
-	)
+	processor := log.NewBatchProcessor(exp)
+	loggerProvider := log.NewLoggerProvider(log.WithProcessor(processor))
 	return loggerProvider, nil
 }
