@@ -11,7 +11,7 @@ import (
 )
 
 func New() (*http.Server, error) {
-	target, err := url.Parse("http://localhost:8080")
+	target, err := url.Parse("http://hello:8080")
 	if err != nil {
 		return nil, err
 	}
