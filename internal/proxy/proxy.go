@@ -12,6 +12,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+var PORT = os.Getenv("PORT")
+
 type Config struct {
 	Routes map[string]string `yaml:"routes"`
 }
@@ -57,7 +59,7 @@ func New() (*http.Server, error) {
 	otelHandler = telemetry.WithMetrics(otelHandler)
 
 	return &http.Server{
-		Addr:    ":8000",
+		Addr:    fmt.Sprintf(":%s", PORT),
 		Handler: otelHandler,
 	}, nil
 }
