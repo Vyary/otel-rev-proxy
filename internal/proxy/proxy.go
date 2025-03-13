@@ -19,7 +19,7 @@ type Config struct {
 func New() (*http.Server, error) {
 	configPath := os.Getenv("PROXY_CONFIG_PATH")
 	if configPath == "" {
-		configPath = "/app/configs/routes.yaml"
+		configPath = "configs/routes.yaml"
 	}
 
 	config, err := LoadConfig(configPath)
@@ -57,7 +57,7 @@ func New() (*http.Server, error) {
 	otelHandler = telemetry.WithMetrics(otelHandler)
 
 	return &http.Server{
-		Addr:    ":80",
+		Addr:    ":8000",
 		Handler: otelHandler,
 	}, nil
 }
