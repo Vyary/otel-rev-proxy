@@ -15,7 +15,8 @@ import (
 var PORT = os.Getenv("PORT")
 
 type Config struct {
-	Routes map[string]string `yaml:"routes"`
+	Routes       map[string]string `yaml:"routes"`
+	RoutesNoOtel map[string]string `yaml:"routes_no_otel"`
 }
 
 func New() (*http.Server, error) {
@@ -29,7 +30,8 @@ func New() (*http.Server, error) {
 		return nil, fmt.Errorf("failed to load config: %v", err)
 	}
 
-	proxies := make(map[string]*httputil.ReverseProxy)
+	proxies := make(map[string]http.Handler)
+
 	for host, target := range config.Routes {
 		t, err := url.Parse(target)
 		if err != nil {
@@ -38,6 +40,26 @@ func New() (*http.Server, error) {
 
 		proxy := httputil.NewSingleHostReverseProxy(t)
 		proxy.Transport = otelhttp.NewTransport(http.DefaultTransport)
+
+		otelHandler := otelhttp.NewHandler(proxy, "reverse_proxy",
+			otelhttp.WithSpanNameFormatter(func(operation string, r *http.Request) string {
+				return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
+			}),
+		)
+
+		otelHandler = telemetry.WithMetrics(otelHandler)
+
+		proxies[host] = otelHandler
+	}
+
+	for host, targetURL := range config.RoutesNoOtel {
+		target, err := url.Parse(targetURL)
+		if err != nil {
+			return nil, fmt.Errorf("invalid URL for host %s: %v", host, err)
+		}
+
+		proxy := httputil.NewSingleHostReverseProxy(target)
+
 		proxies[host] = proxy
 	}
 
@@ -50,17 +72,9 @@ func New() (*http.Server, error) {
 		proxy.ServeHTTP(w, r)
 	})
 
-	otelHandler := otelhttp.NewHandler(handler, "reverse_proxy",
-		otelhttp.WithSpanNameFormatter(func(operation string, r *http.Request) string {
-			return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
-		}),
-	)
-
-	otelHandler = telemetry.WithMetrics(otelHandler)
-
 	return &http.Server{
 		Addr:    fmt.Sprintf(":%s", PORT),
-		Handler: otelHandler,
+		Handler: handler,
 	}, nil
 }
 
