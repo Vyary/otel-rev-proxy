@@ -20,7 +20,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
-var endpoint = os.Getenv("COLLECTOR")
+var endpoint = os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 
 // setupOTelSDK bootstraps the OpenTelemetry pipeline.
 // If it does not return an error, make sure to call shutdown for proper cleanup.
