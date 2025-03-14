@@ -3,11 +3,14 @@ package telemetry
 import (
 	"context"
 	"errors"
+	"os"
+	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/log"
@@ -16,6 +19,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
+
+var endpoint = os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 
 // setupOTelSDK bootstraps the OpenTelemetry pipeline.
 // If it does not return an error, make sure to call shutdown for proper cleanup.
@@ -82,7 +87,10 @@ func newPropagator() propagation.TextMapPropagator {
 
 func newTracerProvider() (*trace.TracerProvider, error) {
 	ctx := context.Background()
-	exp, err := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure())
+	traceClient := otlptracegrpc.NewClient(
+		otlptracegrpc.WithInsecure(),
+		otlptracegrpc.WithEndpoint(endpoint))
+	exp, err := otlptrace.New(ctx, traceClient)
 	if err != nil {
 		panic(err)
 	}
@@ -96,13 +104,49 @@ func newTracerProvider() (*trace.TracerProvider, error) {
 		return nil, err
 	}
 
-	tracerProvider := trace.NewTracerProvider(trace.WithBatcher(exp), trace.WithResource(res))
+	bsp := trace.NewBatchSpanProcessor(exp)
+	tracerProvider := trace.NewTracerProvider(
+		trace.WithSampler(trace.AlwaysSample()),
+		trace.WithResource(res),
+		trace.WithSpanProcessor(bsp),
+	)
 	return tracerProvider, nil
 }
 
 func newMeterProvider() (*metric.MeterProvider, error) {
 	ctx := context.Background()
-	exp, err := otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithInsecure())
+	exp, err := otlpmetricgrpc.New(
+		ctx,
+		otlpmetricgrpc.WithInsecure(),
+		otlpmetricgrpc.WithEndpoint(endpoint))
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := resource.New(ctx,
+		resource.WithAttributes(
+			semconv.ServiceNameKey.String("reverse-proxy"),
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	meterProvider := metric.NewMeterProvider(
+		metric.WithResource(res),
+		metric.WithReader(
+			metric.NewPeriodicReader(
+				exp,
+				metric.WithInterval(2*time.Second),
+			),
+		),
+	)
+	return meterProvider, nil
+}
+
+func newLoggerProvider() (*log.LoggerProvider, error) {
+	ctx := context.Background()
+	exp, err := otlploggrpc.New(ctx, otlploggrpc.WithInsecure(), otlploggrpc.WithEndpoint(endpoint))
 	if err != nil {
 		panic(err)
 	}
@@ -116,18 +160,7 @@ func newMeterProvider() (*metric.MeterProvider, error) {
 		return nil, err
 	}
 
-	meterProvider := metric.NewMeterProvider(metric.WithReader(metric.NewPeriodicReader(exp)), metric.WithResource(res))
-	return meterProvider, nil
-}
-
-func newLoggerProvider() (*log.LoggerProvider, error) {
-	logExporter, err := stdoutlog.New()
-	if err != nil {
-		return nil, err
-	}
-
-	loggerProvider := log.NewLoggerProvider(
-		log.WithProcessor(log.NewBatchProcessor(logExporter)),
-	)
+	processor := log.NewBatchProcessor(exp)
+	loggerProvider := log.NewLoggerProvider(log.WithProcessor(processor), log.WithResource(res))
 	return loggerProvider, nil
 }
