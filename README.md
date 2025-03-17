@@ -20,18 +20,19 @@ OpenTelemetry is a high-performance reverse proxy designed to seamlessly integra
 
 ```mermaid
 sequenceDiagram
-    participant C as Client
-    participant P as Proxy Server
-    participant M as Metrics Middleware
-    participant T as OTel Transport
-    participant U as Upstream Server
+    participant Main as main.go
+    participant Proxy as proxy.New(PORT)
+    participant Config as Route Config Loader
+    participant Tele as Telemetry Wrapper
+    participant Backend as Backend Server
 
-    C->>P: HTTP Request
-    P->>M: Wrap request with WithMetrics
-    M->>T: Forward request using otelhttp.NewTransport
-    T->>U: Send request to Upstream Server
-    U-->>T: Return response
-    T-->>M: Pass response data with timing/status
-    M-->>P: Forward response with metrics logged
-    P-->>C: HTTP Response
+    Main->>Proxy: Call New(PORT)
+    Proxy->>Config: Load YAML config & structured routes
+    alt Route has Otel enabled
+        Config->>Tele: Apply WithTraces wrapping
+        Tele->>Proxy: Return instrumented handler
+    end
+    Proxy->>Backend: Forward incoming HTTP request
+    Backend-->>Proxy: Return response
+    Proxy-->>Main: Return server instance with routing and telemetry handling
 ```
