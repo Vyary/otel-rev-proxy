@@ -1,10 +1,7 @@
 package telemetry
 
 import (
-	"bufio"
 	"context"
-	"fmt"
-	"net"
 	"net/http"
 	"time"
 
@@ -30,22 +27,22 @@ func WithMetrics(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		startTime := time.Now()
 
-		ww := &statusCodeResponseWriter{ResponseWriter: w}
+		rw := &ResponseWriterWrapper{ResponseWriter: w, statusCode: http.StatusOK}
 
-		next.ServeHTTP(ww, r)
+		next.ServeHTTP(rw, r)
 
 		requestCounter.Add(r.Context(), 1,
 			metric.WithAttributes(
 				attribute.Key("method").String(r.Method),
 				attribute.Key("route").String(r.URL.Path),
-				attribute.Key("code").Int(ww.statusCode)))
+				attribute.Key("code").Int(rw.statusCode)))
 
 		duration := time.Since(startTime).Seconds()
 		requestDuration.Record(r.Context(), duration,
 			metric.WithAttributes(
 				attribute.Key("method").String(r.Method),
 				attribute.Key("route").String(r.URL.Path),
-				attribute.Key("code").Int(ww.statusCode)))
+				attribute.Key("code").Int(rw.statusCode)))
 	})
 }
 
@@ -86,22 +83,4 @@ func init() {
 		logger.Error("failed to create request duration metric")
 		panic(err)
 	}
-}
-
-type statusCodeResponseWriter struct {
-	http.ResponseWriter
-	statusCode int
-}
-
-func (w *statusCodeResponseWriter) WriteHeader(statusCode int) {
-	w.statusCode = statusCode
-	w.ResponseWriter.WriteHeader(statusCode)
-}
-
-func (w *statusCodeResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
-	hj, ok := w.ResponseWriter.(http.Hijacker)
-	if !ok {
-		return nil, nil, fmt.Errorf("underlying ResponseWriter does not support hijacking")
-	}
-	return hj.Hijack()
 }
