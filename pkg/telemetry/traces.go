@@ -24,6 +24,8 @@ func WithTraces(next *httputil.ReverseProxy) http.Handler {
 		ExpectContinueTimeout: 2 * time.Second,
 		TLSHandshakeTimeout:   10 * time.Second,
 		IdleConnTimeout:       90 * time.Second,
+		MaxIdleConns:          500,
+		MaxIdleConnsPerHost:   100,
 	})
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -34,6 +36,7 @@ func WithTraces(next *httputil.ReverseProxy) http.Handler {
 		span.SetAttributes(
 			attribute.String("http.method", r.Method),
 			attribute.String("http.url", r.URL.String()),
+			attribute.String("http.host", r.Host),
 			attribute.String("http.user_agent", r.UserAgent()),
 		)
 
