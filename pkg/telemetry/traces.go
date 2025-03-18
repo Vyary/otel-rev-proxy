@@ -11,10 +11,11 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
-var tracer = otel.Tracer("reverse-proxy")
+var tracer = otel.Tracer(service)
 
 func WithTraces(next *httputil.ReverseProxy) http.Handler {
 	next.Transport = otelhttp.NewTransport(&http.Transport{
@@ -39,6 +40,12 @@ func WithTraces(next *httputil.ReverseProxy) http.Handler {
 			attribute.String("http.host", r.Host),
 			attribute.String("http.user_agent", r.UserAgent()),
 		)
+
+		originalDirector := next.Director
+		next.Director = func(req *http.Request) {
+			originalDirector(req)
+			otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Header))
+		}
 
 		rw := &ResponseWriterWrapper{ResponseWriter: w, statusCode: http.StatusOK}
 

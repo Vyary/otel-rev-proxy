@@ -12,9 +12,9 @@ import (
 )
 
 var (
-	logger = otelslog.NewLogger("reverse-proxy")
+	logger = otelslog.NewLogger(service)
 
-	meter                  = otel.Meter("reverse-proxy")
+	meter                  = otel.Meter(service)
 	proxyUptime            metric.Float64ObservableCounter
 	requestCounter         metric.Int64Counter
 	requestDuration        metric.Float64Histogram

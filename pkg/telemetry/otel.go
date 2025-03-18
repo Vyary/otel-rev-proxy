@@ -20,7 +20,10 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
-var endpoint = os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+var (
+	service  = os.Getenv("SERVICE_NAME")
+	endpoint = os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+)
 
 // setupOTelSDK bootstraps the OpenTelemetry pipeline.
 // If it does not return an error, make sure to call shutdown for proper cleanup.
@@ -97,7 +100,7 @@ func newTracerProvider() (*trace.TracerProvider, error) {
 
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
-			semconv.ServiceNameKey.String("reverse-proxy"),
+			semconv.ServiceNameKey.String(service),
 		),
 	)
 	if err != nil {
@@ -125,7 +128,7 @@ func newMeterProvider() (*metric.MeterProvider, error) {
 
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
-			semconv.ServiceNameKey.String("reverse-proxy"),
+			semconv.ServiceNameKey.String(service),
 		),
 	)
 	if err != nil {
@@ -153,7 +156,7 @@ func newLoggerProvider() (*log.LoggerProvider, error) {
 
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
-			semconv.ServiceNameKey.String("reverse-proxy"),
+			semconv.ServiceNameKey.String(service),
 		),
 	)
 	if err != nil {
