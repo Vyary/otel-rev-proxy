@@ -55,6 +55,7 @@ func WithTraces(next *httputil.ReverseProxy) http.Handler {
 
 		if rw.statusCode >= 400 {
 			span.SetStatus(codes.Error, fmt.Sprintf("HTTP %d", rw.statusCode))
+			return
 		}
 
 		span.SetStatus(codes.Ok, "successfully completed the request")

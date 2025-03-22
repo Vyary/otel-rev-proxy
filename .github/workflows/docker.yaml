@@ -1,15 +1,10 @@
 name: Publish Multi-Arch Docker Image
-
 on:
   push:
     branches:
       - main
-
 jobs:
   push_to_registry:
-    strategy:
-      matrix:
-        arch: [amd64, arm64]
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repo
@@ -29,7 +24,7 @@ jobs:
         with:
           context: .
           push: true
-          platforms: linux/${{ matrix.arch }}
+          platforms: linux/amd64,linux/arm64
           tags: |
-            vyary/otel-rev-proxy:${{ matrix.arch }}-latest
-            vyary/otel-rev-proxy:${{ matrix.arch }}-${{ github.sha }}
+            vyary/otel-rev-proxy:latest
+            vyary/otel-rev-proxy:${{ github.sha }}
