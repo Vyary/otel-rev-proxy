@@ -1,4 +1,3 @@
-# Stage 1: Build the binary
 FROM golang:1.24.0-bookworm AS builder
 
 WORKDIR /app
@@ -11,8 +10,7 @@ COPY . .
 ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -ldflags="-s -w" -o /main ./cmd/main.go
 
-# Stage 2: Minimal runtime image
-FROM gcr.io/distroless/static:nonroot
+FROM gcr.io/distroless
 
 COPY --from=builder /main /main
 
