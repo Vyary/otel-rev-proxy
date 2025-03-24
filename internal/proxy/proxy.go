@@ -20,7 +20,7 @@ type Config struct {
 	Routes map[string]Route `yaml:"routes"`
 }
 
-func New(port string) (*http.Server, error) {
+func New() (*http.Server, error) {
 	configPath := os.Getenv("PROXY_CONFIG_PATH")
 	if configPath == "" {
 		configPath = "/etc/configs/otel-rev-proxy/routes.yaml"
@@ -63,7 +63,7 @@ func New(port string) (*http.Server, error) {
 	})
 
 	return &http.Server{
-		Addr:    fmt.Sprintf(":%s", port),
+		Addr:    ":443",
 		Handler: handler,
 	}, nil
 }

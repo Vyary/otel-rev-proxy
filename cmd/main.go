@@ -24,7 +24,6 @@ func main() {
 }
 
 func run() error {
-	port := os.Getenv("PORT")
 	certFile := os.Getenv("CERT_FILE")
 	keyFile := os.Getenv("KEY_FILE")
 
@@ -37,18 +36,18 @@ func run() error {
 	}
 	defer otelShutdown(context.Background())
 
-	srv, err := proxy.New(port)
+	srv, err := proxy.New()
 	if err != nil {
 		return err
 	}
 
 	srvErr := make(chan error, 1)
 	go func() {
-		slog.Info("Starting the Reverse Proxy...")
+		slog.Info("Starting Redirect Handler...")
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "https://"+r.Host+r.URL.String(), http.StatusMovedPermanently)
 		})
-		srvErr <- http.ListenAndServe(":8011", nil)
+		srvErr <- http.ListenAndServe(":80", nil)
 	}()
 
 	go func() {
