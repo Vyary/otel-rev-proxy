@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -44,7 +45,10 @@ func run() error {
 	srvErr := make(chan error, 1)
 	go func() {
 		slog.Info("Starting the Reverse Proxy...")
-		srvErr <- srv.ListenAndServe()
+		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, "https://"+r.Host+r.URL.String(), http.StatusMovedPermanently)
+		})
+		srvErr <- http.ListenAndServe(":8011", nil)
 	}()
 
 	go func() {
