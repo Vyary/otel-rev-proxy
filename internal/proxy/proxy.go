@@ -60,6 +60,7 @@ func New(port string) (*http.Server, error) {
 			slog.Info(fmt.Sprintf("No proxy found for host: %s", r.Host))
 			slog.Info(fmt.Sprintf("Available proxies: %v", reflect.ValueOf(proxies).MapKeys()))
 			http.Error(w, "Host not found", http.StatusNotFound)
+      return
 		}
 
 		proxy.ServeHTTP(w, r)
