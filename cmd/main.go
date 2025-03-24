@@ -17,7 +17,7 @@ var logger = otelslog.NewLogger("reverse-proxy")
 
 func main() {
 	if err := run(); err != nil {
-		logger.Error("failed to start the reverse proxy", "error", err)
+		slog.Error("failed to start the reverse proxy", "error", err)
 		os.Exit(1)
 	}
 }
