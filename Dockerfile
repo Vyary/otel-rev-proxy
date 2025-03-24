@@ -10,7 +10,7 @@ COPY . .
 ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -ldflags="-s -w" -o /main ./cmd/main.go
 
-FROM gcr.io/distroless
+FROM gcr.io/distroless/static
 
 COPY --from=builder /main /main
 
