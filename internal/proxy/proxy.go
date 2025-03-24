@@ -2,10 +2,12 @@ package proxy
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"reflect"
 
 	"github.com/Vyary/otel-rev-proxy/pkg/telemetry"
 	"gopkg.in/yaml.v3"
@@ -55,6 +57,8 @@ func New() (*http.Server, error) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		proxy, exists := proxies[r.Host]
 		if !exists {
+			slog.Info(fmt.Sprintf("No proxy found for host: %s", r.Host))
+			slog.Info(fmt.Sprintf("Available proxies: %v", reflect.ValueOf(proxies).MapKeys()))
 			http.Error(w, "Host not found", http.StatusNotFound)
 			return
 		}
