@@ -24,6 +24,8 @@ func main() {
 
 func run() error {
 	port := os.Getenv("PORT")
+	certFile := os.Getenv("CERT_FILE")
+	keyFile := os.Getenv("KEY_FILE")
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -42,7 +44,7 @@ func run() error {
 	srvErr := make(chan error, 1)
 	go func() {
 		slog.Info("Starting the Reverse Proxy...")
-		srvErr <- srv.ListenAndServe()
+		srvErr <- srv.ListenAndServeTLS(certFile, keyFile)
 	}()
 
 	select {
