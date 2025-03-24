@@ -1,7 +1,6 @@
 package proxy
 
 import (
-	"crypto/tls"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
@@ -66,9 +65,6 @@ func New(port string) (*http.Server, error) {
 	return &http.Server{
 		Addr:    fmt.Sprintf(":%s", port),
 		Handler: handler,
-		TLSConfig: &tls.Config{
-			MinVersion: tls.VersionTLS13,
-		},
 	}, nil
 }
 

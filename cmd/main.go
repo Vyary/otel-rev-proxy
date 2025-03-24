@@ -44,6 +44,11 @@ func run() error {
 	srvErr := make(chan error, 1)
 	go func() {
 		slog.Info("Starting the Reverse Proxy...")
+		srvErr <- srv.ListenAndServe()
+	}()
+
+	go func() {
+		slog.Info("Starting Secure Reverse Proxy...")
 		srvErr <- srv.ListenAndServeTLS(certFile, keyFile)
 	}()
 
