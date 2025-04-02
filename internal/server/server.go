@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/Vyary/otel-rev-proxy/internal/middleware"
 	"github.com/Vyary/otel-rev-proxy/internal/models"
 	"github.com/Vyary/otel-rev-proxy/internal/proxy"
 	"gopkg.in/yaml.v3"
@@ -32,7 +33,7 @@ func NewWithOptions(opts ServerOptions) (*http.Server, error) {
 
 	return &http.Server{
 		Addr:    fmt.Sprintf(":%s", opts.Port),
-		Handler: proxy.Handler(),
+		Handler: middleware.Cors(proxy.Handler()),
 	}, nil
 }
 
