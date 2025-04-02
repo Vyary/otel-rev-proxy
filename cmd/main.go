@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Vyary/otel-rev-proxy/internal/proxy"
+	"github.com/Vyary/otel-rev-proxy/internal/server"
 	"github.com/Vyary/otel-rev-proxy/pkg/telemetry"
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 )
@@ -36,7 +36,7 @@ func run() error {
 	}
 	defer otelShutdown(context.Background())
 
-	srv, err := proxy.New()
+	srv, err := server.New()
 	if err != nil {
 		return err
 	}
