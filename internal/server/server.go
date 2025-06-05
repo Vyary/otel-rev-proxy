@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/Vyary/otel-rev-proxy/internal/middleware"
 	"github.com/Vyary/otel-rev-proxy/internal/models"
@@ -32,8 +33,13 @@ func NewWithOptions(opts ServerOptions) (*http.Server, error) {
 	}
 
 	return &http.Server{
-		Addr:    fmt.Sprintf(":%s", opts.Port),
-		Handler: middleware.Cors(proxy.Handler()),
+		Addr:              fmt.Sprintf(":%s", opts.Port),
+		Handler:           middleware.Cors(proxy.Handler()),
+		IdleTimeout:       90 * time.Second,
+		ReadTimeout:       45 * time.Second,
+		WriteTimeout:      0,
+		ReadHeaderTimeout: 10 * time.Second,
+		MaxHeaderBytes:    1 << 20,
 	}, nil
 }
 
