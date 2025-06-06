@@ -6,6 +6,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/Vyary/otel-rev-proxy/internal/models"
 	"github.com/Vyary/otel-rev-proxy/pkg/telemetry"
@@ -87,6 +88,20 @@ func (p *proxyServer) createProxies() error {
 		}
 
 		proxy := httputil.NewSingleHostReverseProxy(target)
+
+		originalDirector := proxy.Director
+		proxy.Director = func(r *http.Request) {
+			originalDirector(r)
+			r.Header.Set("Connection", "keep-alive")
+			r.Header.Set("Cache-Control", "no-cache")
+		}
+
+		proxy.Transport = &http.Transport{
+			MaxIdleConns:       100,
+			IdleConnTimeout:    90 * time.Second,
+			DisableCompression: true,
+			DisableKeepAlives:  false,
+		}
 
 		if route.Otel {
 			otelHandler := telemetry.WithTraces(proxy)
