@@ -6,7 +6,6 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/Vyary/otel-rev-proxy/internal/models"
 	"github.com/Vyary/otel-rev-proxy/pkg/telemetry"
@@ -17,10 +16,6 @@ type proxies map[string]http.Handler
 type proxyServer struct {
 	config  models.Config
 	proxies proxies
-}
-
-type sseRoundTripper struct {
-	http.RoundTripper
 }
 
 func NewProxy(config *models.Config) (*proxyServer, error) {
@@ -93,33 +88,6 @@ func (p *proxyServer) createProxies() error {
 
 		proxy := httputil.NewSingleHostReverseProxy(target)
 
-		proxy.Transport = &sseRoundTripper{
-			RoundTripper: &http.Transport{
-				MaxIdleConns:       100,
-				IdleConnTimeout:    90 * time.Second,
-				DisableCompression: true,
-				DisableKeepAlives:  false,
-			},
-		}
-
-		proxy.ModifyResponse = func(r *http.Response) error {
-			if r.Header.Get("Content-Type") == "text/event-stream" {
-				r.Header.Del("Content-Length")
-			}
-
-			return nil
-		}
-
-		originalDirector := proxy.Director
-		proxy.Director = func(r *http.Request) {
-			originalDirector(r)
-
-			if r.Header.Get("Accept") == "text/event-stream" {
-				r.Header.Set("Connection", "keep-alive")
-				r.Header.Set("Cache-Control", "no-cache")
-			}
-		}
-
 		if route.Otel {
 			otelHandler := telemetry.WithTraces(proxy)
 			otelHandler = telemetry.WithMetrics(otelHandler)
@@ -132,19 +100,4 @@ func (p *proxyServer) createProxies() error {
 	}
 
 	return nil
-}
-
-func (s *sseRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	resp, err := s.RoundTripper.RoundTrip(req)
-	if err != nil {
-		return nil, err
-	}
-
-	// For SSE responses, ensure no buffering
-	if resp.Header.Get("Content-Type") == "text/event-stream" {
-		resp.Header.Del("Content-Length")
-		resp.ContentLength = -1
-	}
-
-	return resp, nil
 }

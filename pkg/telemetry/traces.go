@@ -2,10 +2,8 @@ package telemetry
 
 import (
 	"fmt"
-	"net"
 	"net/http"
 	"net/http/httputil"
-	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
@@ -18,16 +16,11 @@ import (
 var tracer = otel.Tracer(service)
 
 func WithTraces(next *httputil.ReverseProxy) http.Handler {
-	next.Transport = otelhttp.NewTransport(&http.Transport{
-		Proxy:                 http.ProxyFromEnvironment,
-		DialContext:           (&net.Dialer{Timeout: 10 * time.Second}).DialContext,
-		ResponseHeaderTimeout: 15 * time.Second,
-		ExpectContinueTimeout: 2 * time.Second,
-		TLSHandshakeTimeout:   10 * time.Second,
-		IdleConnTimeout:       90 * time.Second,
-		MaxIdleConns:          500,
-		MaxIdleConnsPerHost:   100,
-	})
+	next.Transport = otelhttp.NewTransport(next.Transport)
+
+	if next.Transport == nil {
+		next.Transport = otelhttp.NewTransport(http.DefaultTransport)
+	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		spanName := fmt.Sprintf("%s %s", r.Method, r.URL.Path)
