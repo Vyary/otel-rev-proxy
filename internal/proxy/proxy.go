@@ -19,6 +19,10 @@ type proxyServer struct {
 	proxies proxies
 }
 
+type sseRoundTripper struct {
+	http.RoundTripper
+}
+
 func NewProxy(config *models.Config) (*proxyServer, error) {
 	proxyServer := &proxyServer{
 		config: *config,
@@ -89,18 +93,31 @@ func (p *proxyServer) createProxies() error {
 
 		proxy := httputil.NewSingleHostReverseProxy(target)
 
+		proxy.Transport = &sseRoundTripper{
+			RoundTripper: &http.Transport{
+				MaxIdleConns:       100,
+				IdleConnTimeout:    90 * time.Second,
+				DisableCompression: true,
+				DisableKeepAlives:  false,
+			},
+		}
+
+		proxy.ModifyResponse = func(r *http.Response) error {
+			if r.Header.Get("Content-Type") == "text/event-stream" {
+				r.Header.Del("Content-Length")
+			}
+
+			return nil
+		}
+
 		originalDirector := proxy.Director
 		proxy.Director = func(r *http.Request) {
 			originalDirector(r)
-			r.Header.Set("Connection", "keep-alive")
-			r.Header.Set("Cache-Control", "no-cache")
-		}
 
-		proxy.Transport = &http.Transport{
-			MaxIdleConns:       100,
-			IdleConnTimeout:    90 * time.Second,
-			DisableCompression: true,
-			DisableKeepAlives:  false,
+			if r.Header.Get("Accept") == "text/event-stream" {
+				r.Header.Set("Connection", "keep-alive")
+				r.Header.Set("Cache-Control", "no-cache")
+			}
 		}
 
 		if route.Otel {
@@ -115,4 +132,19 @@ func (p *proxyServer) createProxies() error {
 	}
 
 	return nil
+}
+
+func (s *sseRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	resp, err := s.RoundTripper.RoundTrip(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// For SSE responses, ensure no buffering
+	if resp.Header.Get("Content-Type") == "text/event-stream" {
+		resp.Header.Del("Content-Length")
+		resp.ContentLength = -1
+	}
+
+	return resp, nil
 }
