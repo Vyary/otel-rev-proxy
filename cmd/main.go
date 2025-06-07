@@ -27,6 +27,8 @@ func run() error {
 	certFile := os.Getenv("CERT_FILE")
 	keyFile := os.Getenv("KEY_FILE")
 
+	slog.SetDefault(logger)
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
