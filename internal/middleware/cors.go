@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"log/slog"
 	"net/http"
+	"strings"
 )
 
 func Cors(next http.Handler) http.Handler {
@@ -15,9 +15,7 @@ func Cors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 
-		slog.Info("Request origin", "Origin", origin)
-
-		if origin != "" {
+		if strings.TrimSpace(origin) != "" {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Access-Control-Allow-Credentials", allowCredentials)
 			w.Header().Set("Access-Control-Allow-Methods", allowedMethods)
