@@ -14,7 +14,10 @@ import (
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 )
 
-var logger = otelslog.NewLogger("reverse-proxy")
+var (
+	service = os.Getenv("SERVICE_NAME")
+	logger  = otelslog.NewLogger(service)
+)
 
 func main() {
 	if err := run(); err != nil {

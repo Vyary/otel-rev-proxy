@@ -2,18 +2,16 @@ package telemetry
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"time"
 
-	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 )
 
 var (
-	logger = otelslog.NewLogger(service)
-
 	meter                  = otel.Meter(service)
 	proxyUptime            metric.Float64ObservableCounter
 	requestCounter         metric.Int64Counter
@@ -60,8 +58,7 @@ func init() {
 		}),
 	)
 	if err != nil {
-		logger.Error("failed to create an uptime metric", "error", err)
-		panic(err)
+		slog.Error("failed to create an uptime metric", "error", err)
 	}
 
 	requestCounter, err = meter.Int64Counter(
@@ -69,8 +66,7 @@ func init() {
 		metric.WithDescription("Total number of requests handled by the reverse proxy."),
 	)
 	if err != nil {
-		logger.Error("failed to create an requests total metric", "error", err)
-		panic(err)
+		slog.Error("failed to create an requests total metric", "error", err)
 	}
 
 	requestDuration, err = meter.Float64Histogram(
@@ -80,7 +76,6 @@ func init() {
 		metric.WithExplicitBucketBoundaries(requestDurationBuckets...),
 	)
 	if err != nil {
-		logger.Error("failed to create request duration metric")
-		panic(err)
+		slog.Error("failed to create request duration metric")
 	}
 }
