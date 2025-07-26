@@ -1,11 +1,21 @@
 package middleware
 
 import (
+	"encoding/json"
+	"log/slog"
 	"net/http"
+	"os"
 )
 
 func Cors(next http.Handler) http.Handler {
 	AllowedOrigins := []string{"*"}
+
+	originsEnv := os.Getenv("ALLOWED_ORIGINS")
+	if originsEnv != "" {
+		if err := json.Unmarshal([]byte(originsEnv), &AllowedOrigins); err != nil {
+			slog.Error("Failed to Unmarshal ALLOWED_ORIGINS env")
+		}
+	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
