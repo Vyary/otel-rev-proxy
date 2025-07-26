@@ -17,6 +17,8 @@ func Cors(next http.Handler) http.Handler {
 		}
 	}
 
+	slog.Info("Allowed Origins", "origins", AllowedOrigins)
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 
