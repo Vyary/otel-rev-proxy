@@ -30,16 +30,18 @@ func run() error {
 	certFile := os.Getenv("CERT_FILE")
 	keyFile := os.Getenv("KEY_FILE")
 
-	slog.SetDefault(logger)
-
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	otelShutdown, err := telemetry.SetupOTelSDK(ctx)
-	if err != nil {
-		return err
+	if os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT") != "" {
+		slog.SetDefault(logger)
+
+		otelShutdown, err := telemetry.SetupOTelSDK(ctx)
+		if err != nil {
+			return err
+		}
+		defer otelShutdown(context.Background())
 	}
-	defer otelShutdown(context.Background())
 
 	srv, err := server.New()
 	if err != nil {
